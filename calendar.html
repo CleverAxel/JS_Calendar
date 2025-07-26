@@ -15,7 +15,14 @@
         padding: 0;
     }
 
-    .calendar {
+    .date_picker .calendar {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: all 100ms ease-in-out;
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0;
         background: white;
         border: 1px solid #e0e0e0;
         border-radius: 8px;
@@ -25,14 +32,20 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    .calendar_header {
+    .date_picker .calendar.visible {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .date_picker .calendar_header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
     }
 
-    .nav_button {
+    .date_picker .nav_button {
         background: none;
         border: none;
         font-size: 18px;
@@ -45,24 +58,48 @@
         transition: background-color 0.2s;
     }
 
-    .nav_button:hover {
+    .date_picker .nav_button:hover {
         background-color: #f0f0f0;
     }
 
-    .month_year {
-        font-size: 18px;
-        font-weight: 600;
-        color: #333;
+    .date_picker .month_year {
+        display: flex;
+        gap: 3px;
     }
 
-    .days_header {
+    .date_picker .month_year select {
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: white;
+        border: 1px solid #aaa;
+        border-radius: 6px;
+        padding: 6px 18px;
+        cursor: pointer;
+        transition: border-color 0.2s ease-in-out;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        text-align-last: center;
+    }
+
+    .date_picker .month_year select:hover,
+    .date_picker .month_year select:focus {
+        border-color: #1976d2;
+        outline: none;
+        box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
+    }
+
+    .date_picker .days_header {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 2px;
         margin-bottom: 8px;
     }
 
-    .day_name {
+    .date_picker .day_name {
         text-align: center;
         font-size: 12px;
         font-weight: 600;
@@ -70,7 +107,7 @@
         padding: 8px 0;
     }
 
-    .days_grid {
+    .date_picker .days_grid {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         grid-template-rows: repeat(6, 1fr);
@@ -78,7 +115,7 @@
         height: 240px;
     }
 
-    .day_cell {
+    .date_picker .day_cell {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -91,47 +128,112 @@
         color: #333;
     }
 
-    .day_cell:hover:not(.empty):not(.selected) {
+    .date_picker .day_cell:hover:not(.empty):not(.selected) {
         background-color: #f0f0f0;
     }
 
-    .day_cell.today {
+    .date_picker .day_cell.today {
         background-color: #e3f2fd;
         color: #1976d2;
         font-weight: 600;
     }
 
-    .day_cell.selected {
+    .date_picker .day_cell.selected,
+    .date_picker .day_cell.selected.week_end {
         background-color: #1976d2;
         color: white;
         font-weight: 600;
     }
 
-    .day_cell.empty {
+    .date_picker .day_cell.empty {
         cursor: default;
         color: #ccc;
+    }
+
+    .date_picker .day_cell.week_end {
+        color: #ff3838;
+    }
+
+    .date_picker {
+        position: relative;
+        max-width: 320px;
+        margin: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    .date_picker>input {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        text-align: center;
+        font-size: 18px;
+        width: 150px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #aaaaaa;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .date_picker>input.invalid {
+        border: 1px solid rgb(255, 56, 56);
+        outline: 1px solid rgb(255, 56, 56);
+    }
+
+    .date_picker>.calendar_toggle_button {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        padding: 8px;
+        width: 40px;
+        height: 40px;
+        border-radius: 5px;
+        color: #666;
+        transition: background-color 0.2s;
+        background-color: #1976d2;
+        fill: white;
+    }
+
+    .date_picker>button:hover {
+        background-color: #4192e3;
     }
 </style>
 
 <body>
-    <div class="calendar">
-        <div class="calendar_header">
-            <button class="nav_button" id="prev_month_button">‹</button>
-            <div class="month_year" id="month_year_display"></div>
-            <button class="nav_button" id="next_month_button">›</button>
-        </div>
+    <div class="date_picker" data-min-year="2000" data-max-year="2050">
+        <input type="text" value="" autocomplete="off">
+        <button class="calendar_toggle_button" id="calendar_toggle_button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                <path d="M128 0c17.7 0 32 14.3 32 32l0 32 128 0 0-32c0-17.7 14.3-32 32-32s32 14.3 32 32l0 32 32 0c35.3 0 64 28.7 64 64l0 288c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 128C0 92.7 28.7 64 64 64l32 0 0-32c0-17.7 14.3-32 32-32zM64 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm128 0l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM64 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zm112 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16z" />
+            </svg>
+        </button>
+        <div class="calendar hidden" id="calendar">
+            <div class="calendar_header">
+                <button class="nav_button" id="prev_month_button">‹</button>
+                <div class="month_year" id="month_year_display">
+                    <select id="month_select">
+                    </select>
+                    <select id="year_select">
 
-        <div class="days_header">
-            <div class="day_name">Lun</div>
-            <div class="day_name">Mar</div>
-            <div class="day_name">Mer</div>
-            <div class="day_name">Jeu</div>
-            <div class="day_name">Ven</div>
-            <div class="day_name">Sam</div>
-            <div class="day_name">Dim</div>
-        </div>
+                    </select>
+                </div>
+                <button class="nav_button" id="next_month_button">›</button>
+            </div>
 
-        <div class="days_grid" id="days_grid_container"></div>
+            <div class="days_header">
+                <div class="day_name">Lun</div>
+                <div class="day_name">Mar</div>
+                <div class="day_name">Mer</div>
+                <div class="day_name">Jeu</div>
+                <div class="day_name">Ven</div>
+                <div class="day_name">Sam</div>
+                <div class="day_name">Dim</div>
+            </div>
+
+            <div class="days_grid" id="days_grid_container"></div>
+        </div>
     </div>
 </body>
 <script src="./calendar.js"></script>

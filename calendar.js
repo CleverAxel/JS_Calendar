@@ -1,24 +1,40 @@
-class Calendar {
+class DatePicker {
     /**
-     * @param {HTMLElement} calendarElement 
+     * @param {HTMLElement} calendarInput 
      */
-    constructor(calendarElement, selectedDate = null) {
-        this.calendarElement = calendarElement;
+    constructor(calendarInput) {
+        this.rootElement = calendarInput;
 
         /**@type {HTMLElement} */
-        this.monthYearDisplay = calendarElement.querySelector("#month_year_display");
+        this.monthYearDisplay = calendarInput.querySelector("#month_year_display");
+        /**@type {HTMLElement} */
+        this.calendar = calendarInput.querySelector("#calendar");
+        /**@type {HTMLInputElement} */
+        this.input = calendarInput.querySelector("input");
+        /**@type {HTMLInputElement} */
+        this.yearSelect = calendarInput.querySelector("#year_select");
+        /**@type {HTMLInputElement} */
+        this.monthSelect = calendarInput.querySelector("#month_select");
 
         /**@type {HTMLButtonElement} */
-        this.prevMonthButton = calendarElement.querySelector("#prev_month_button");
+        this.prevMonthButton = calendarInput.querySelector("#prev_month_button");
         /**@type {HTMLButtonElement} */
-        this.nextMonthButton = calendarElement.querySelector("#next_month_button");
+        this.nextMonthButton = calendarInput.querySelector("#next_month_button");
+        /**@type {HTMLButtonElement} */
+        this.toggleCalendarButton = calendarInput.querySelector("#calendar_toggle_button");
+
 
         /**@type {HTMLDivElement} */
-        this.daysGridContainer = calendarElement.querySelector("#days_grid_container");
+        this.daysGridContainer = calendarInput.querySelector("#days_grid_container");
 
         this.selectedDate = new Date();
         this.currentMonthDisplay = new Date();
         this.today = new Date();
+
+
+        // day(1-2 digits), non-digit, month(1-2), non-digit, year(4), with optional surrounding whitespace, the delimiter can be whatever except a number
+        // don't care about the spaces before or after.
+        this.regexDateParser = /^\s*(\d{1,2})\D(\d{1,2})\D(\d{4})\s*$/;
 
 
         this.monthNames = [
@@ -27,25 +43,184 @@ class Calendar {
         ];
 
         this.initEventListeners();
+        this.buildOptionsInSelect();
+        this.initSelectedDateFromInput();
+        this.selectOptionsFromMonthInDisplay();
 
-        if (selectedDate) {
+    }
+
+    initSelectedDateFromInput() {
+        const value = this.input.value;
+        const matches = value.match(this.regexDateParser);
+
+        if (matches && this.isDateValid(matches)) {
+            const day = parseInt(matches[1], 10);
+            const month = parseInt(matches[2], 10) - 1;
+            const year = parseInt(matches[3], 10);
             const displaySelectedDate = true;
-            this.setSelectedDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), displaySelectedDate);
+            this.setSelectedDate(year, month, day, displaySelectedDate);
+            this.reformatDateInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear() });
         } else {
+            if (value.trim().length != "") {
+                this.input.classList.add("invalid");
+            } else {
+                this.reformatDateInInput({ day: this.currentMonthDisplay.getDate(), month: this.currentMonthDisplay.getMonth() + 1, year: this.currentMonthDisplay.getFullYear() });
+            }
             this.render();
         }
     }
 
-    initEventListeners() {
-        this.prevMonthButton.addEventListener("click", () => {
-            this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() - 1, 1);
-            this.render();
-        });
-        this.nextMonthButton.addEventListener("click", () => {
-            this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() + 1, 1);
-            this.render();
-        });
+    selectOptionsFromMonthInDisplay() {
+        try {
+            this.yearSelect.querySelector(`option[value="${this.currentMonthDisplay.getFullYear()}"]`).selected = true;
+            this.monthSelect.querySelector(`option[value="${this.currentMonthDisplay.getMonth()}"]`).selected = true;
+        } catch {
+            console.warn("Year or month option out of range of the select for the month being displayed.");
+        }
+    }
 
+    selectOptionsFromSelectedDate() {
+        try {
+            this.yearSelect.querySelector(`option[value="${this.selectedDate.getFullYear()}"]`).selected = true;
+            this.monthSelect.querySelector(`option[value="${this.selectedDate.getMonth()}"]`).selected = true;
+        } catch {
+            console.warn("Year or month option out of range of the select for the selected date.");
+        }
+    }
+
+    buildOptionsInSelect() {
+        for (let i = 0; i < this.monthNames.length; i++) {
+            const option = document.createElement("option");
+            option.value = i;
+            option.innerHTML = this.monthNames[i];
+            this.monthSelect.appendChild(option);
+        }
+
+        let minYear = parseInt(this.rootElement.getAttribute("data-min-year"));
+        let maxYear = parseInt(this.rootElement.getAttribute("data-max-year"));
+        minYear = isNaN(minYear) ? 1900 : minYear;
+        maxYear = isNaN(maxYear) ? this.today.getFullYear() + 10 : maxYear;
+
+        for (let i = minYear; i <= maxYear; i++) {
+            const option = document.createElement("option");
+            option.value = i;
+            option.innerHTML = i;
+            this.yearSelect.appendChild(option);
+        }
+    }
+
+    initEventListeners() {
+        this.prevMonthButton.addEventListener("click", () => this.navigateToPreviousMonth());
+        this.nextMonthButton.addEventListener("click", () => this.navigateToNextMonth());
+        this.toggleCalendarButton.addEventListener("click", () => this.toggleCalendarVisibility());
+        document.addEventListener("click", (e) => this.handleOutsideClick(e));
+        this.input.addEventListener("input", () => this.handleInputChange());
+        this.input.addEventListener("blur", () => this.handleInputBlur());
+        this.yearSelect.addEventListener("change", () => this.handleYearChange());
+        this.monthSelect.addEventListener("change", () => this.handleMonthChange());
+        this.daysGridContainer.addEventListener("click", (e) => this.handleDayClick(e));
+    }
+
+    navigateToPreviousMonth() {
+        this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() - 1, 1);
+        this.selectOptionsFromMonthInDisplay();
+        this.render();
+    }
+
+    navigateToNextMonth() {
+        this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() + 1, 1);
+        this.selectOptionsFromMonthInDisplay();
+        this.render();
+    }
+
+    toggleCalendarVisibility() {
+        const isVisible = this.calendar.classList.toggle("visible");
+        this.calendar.setAttribute("aria-hidden", !isVisible);
+    }
+
+    handleOutsideClick(e) {
+        if (this.calendar.classList.contains("visible") && !this.rootElement.contains(e.target)) {
+            this.calendar.classList.remove("visible");
+            this.calendar.setAttribute("aria-hidden", "true");
+        }
+    }
+
+    handleInputChange() {
+        const value = this.input.value;
+        const matches = value.match(this.regexDateParser);
+
+        if (matches && this.isDateValid(matches)) {
+            this.reformatDateInInput({
+                day: parseInt(matches[1]),
+                month: parseInt(matches[2]),
+                year: parseInt(matches[3])
+            });
+            this.input.classList.remove("invalid");
+
+            // Parse the input string into numbers
+            let [, day, month, year] = matches.map(Number);
+            this.setSelectedDate(year, month - 1, day, true);
+        }
+    }
+
+    handleInputBlur() {
+        const value = this.input.value;
+        const matches = value.match(this.regexDateParser);
+
+        if (!matches || !this.isDateValid(matches)) {
+            this.input.classList.add("invalid");
+            return;
+        }
+
+        this.reformatDateInInput({
+            day: parseInt(matches[1]),
+            month: parseInt(matches[2]),
+            year: parseInt(matches[3])
+        });
+        this.input.classList.remove("invalid");
+    }
+
+    handleYearChange() {
+        const value = this.yearSelect.value;
+        this.currentMonthDisplay = new Date(value, this.currentMonthDisplay.getMonth(), 1);
+        this.render();
+    }
+
+    handleMonthChange() {
+        const value = this.monthSelect.value;
+        this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), value, 1);
+        this.render();
+    }
+
+    handleDayClick(e) {
+        // Look on what kind of cells the user is clicking, if the cell is not "empty", 
+        // we retrieve its data-attribute, the day, and we set the selected date.
+        if (e.target.classList.contains("day_cell") && !e.target.classList.contains("empty")) {
+            const day = parseInt(e.target.getAttribute("data-day"));
+            this.setSelectedDate(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth(), day);
+            this.reformatDateInInput({
+                day: day,
+                month: this.currentMonthDisplay.getMonth() + 1,
+                year: this.currentMonthDisplay.getFullYear()
+            });
+        }
+    }
+
+    /**
+     * @param {{ day: number, month: number, year: number }} dateObj
+     */
+    reformatDateInInput({ day, month, year }) {
+        const paddedDay = String(day).padStart(2, '0');
+        const paddedMonth = String(month).padStart(2, '0');
+
+        this.input.value = `${paddedDay}/${paddedMonth}/${year}`;
+    }
+
+    isDateValid(matches) {
+        //parse the input string into number
+        let [, day, month, year] = matches.map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
     }
 
     getNbrDaysInMonth() {
@@ -89,22 +264,23 @@ class Calendar {
             this.currentMonthDisplay.setDate(daysCount);
             const isToday = this.today.getDate() == this.currentMonthDisplay.getDate() && this.today.getMonth() == this.currentMonthDisplay.getMonth() && this.today.getFullYear() == this.currentMonthDisplay.getFullYear();
             const isSelected = this.selectedDate.getDate() == this.currentMonthDisplay.getDate() && this.selectedDate.getMonth() == this.currentMonthDisplay.getMonth() && this.selectedDate.getFullYear() == this.currentMonthDisplay.getFullYear();
+            const isWeekend = this.currentMonthDisplay.getDay() == 0 || this.currentMonthDisplay.getDay() == 6;
             const dayCell = document.createElement("button");
             dayCell.innerHTML = daysCount;
             dayCell.classList.add("day_cell");
             if (isToday) {
                 dayCell.classList.add("today");
             }
+
             if (isSelected) {
                 dayCell.classList.add("selected");
             }
 
+            if (isWeekend) {
+                dayCell.classList.add("week_end");
+            }
+
             dayCell.setAttribute("data-day", daysCount.toString());
-
-            dayCell.addEventListener("click", () => {
-                this.setSelectedDate(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth(), daysCount);
-            });
-
             this.daysGridContainer.appendChild(dayCell);
             counterDayCreated++;
         }
@@ -120,9 +296,6 @@ class Calendar {
             counterDayCreated++;
             dayNextMonth++;
         }
-
-
-        this.monthYearDisplay.textContent = `${this.monthNames[this.currentMonthDisplay.getMonth()]} ${this.currentMonthDisplay.getFullYear()}`;
     }
 
     setSelectedDate(year, month, day, displaySelectedDate = false) {
@@ -132,6 +305,7 @@ class Calendar {
 
         if (displaySelectedDate) {
             this.currentMonthDisplay = new Date(year, month, 1);
+            this.selectOptionsFromSelectedDate();
             this.render();
             return;
         }
@@ -149,4 +323,4 @@ class Calendar {
     }
 }
 
-const calendar = new Calendar(document.querySelector(".calendar"));
+const calendar = new DatePicker(document.querySelector(".date_picker"));
