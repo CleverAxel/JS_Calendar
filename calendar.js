@@ -2,7 +2,7 @@ class Calendar {
     /**
      * @param {HTMLElement} calendarElement 
      */
-    constructor(calendarElement, selectedDate = new Date()) {
+    constructor(calendarElement, selectedDate = null) {
         this.calendarElement = calendarElement;
 
         /**@type {HTMLElement} */
@@ -16,19 +16,27 @@ class Calendar {
         /**@type {HTMLDivElement} */
         this.daysGridContainer = calendarElement.querySelector("#days_grid_container");
 
-        this.selectedDate = selectedDate;
+        this.selectedDate = new Date();
         this.currentMonthDisplay = new Date();
         this.today = new Date();
+
 
         this.monthNames = [
             "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
             "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
         ];
 
-        this.init();
+        this.initEventListeners();
+
+        if (selectedDate) {
+            const displaySelectedDate = true;
+            this.setSelectedDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), displaySelectedDate);
+        } else {
+            this.render();
+        }
     }
 
-    init() {
+    initEventListeners() {
         this.prevMonthButton.addEventListener("click", () => {
             this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() - 1, 1);
             this.render();
@@ -37,8 +45,6 @@ class Calendar {
             this.currentMonthDisplay = new Date(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth() + 1, 1);
             this.render();
         });
-
-        this.render();
 
     }
 
@@ -103,7 +109,7 @@ class Calendar {
             counterDayCreated++;
         }
 
-        
+
         let dayNextMonth = 1;
         const requiredNbrOfDaysToDisplay = 42;
         while (counterDayCreated < requiredNbrOfDaysToDisplay) {
@@ -119,10 +125,16 @@ class Calendar {
         this.monthYearDisplay.textContent = `${this.monthNames[this.currentMonthDisplay.getMonth()]} ${this.currentMonthDisplay.getFullYear()}`;
     }
 
-    setSelectedDate(year, month, day) {
+    setSelectedDate(year, month, day, displaySelectedDate = false) {
         this.selectedDate.setDate(day);
-        this.selectedDate.setMonth(this.currentMonthDisplay.getMonth());
-        this.selectedDate.setFullYear(this.currentMonthDisplay.getFullYear());
+        this.selectedDate.setMonth(month);
+        this.selectedDate.setFullYear(year);
+
+        if (displaySelectedDate) {
+            this.currentMonthDisplay = new Date(year, month, 1);
+            this.render();
+            return;
+        }
 
         //if the selected date is the month being currently displayed, update the visual of the selected date
         if (month == this.currentMonthDisplay.getMonth() && year == this.currentMonthDisplay.getFullYear()) {
@@ -136,6 +148,5 @@ class Calendar {
 
     }
 }
-
 
 const calendar = new Calendar(document.querySelector(".calendar"));
