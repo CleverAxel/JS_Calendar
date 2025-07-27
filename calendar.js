@@ -1,31 +1,32 @@
 class DatePicker {
     /**
-     * @param {HTMLElement} calendarInput 
+     * @param {HTMLElement} datePickerElement 
      */
-    constructor(calendarInput) {
-        this.rootElement = calendarInput;
+    constructor(datePickerElement) {
+        this.rootElement = datePickerElement;
+        this.buildBaseDatePicker();
 
         /**@type {HTMLElement} */
-        this.monthYearDisplay = calendarInput.querySelector("#month_year_display");
+        this.monthYearDisplay = this.rootElement.querySelector("#month_year_display");
         /**@type {HTMLElement} */
-        this.calendar = calendarInput.querySelector("#calendar");
+        this.calendar = this.rootElement.querySelector("#calendar");
         /**@type {HTMLInputElement} */
-        this.input = calendarInput.querySelector("input");
+        this.input = this.rootElement.querySelector("input");
         /**@type {HTMLInputElement} */
-        this.yearSelect = calendarInput.querySelector("#year_select");
+        this.yearSelect = this.rootElement.querySelector("#year_select");
         /**@type {HTMLInputElement} */
-        this.monthSelect = calendarInput.querySelector("#month_select");
+        this.monthSelect = this.rootElement.querySelector("#month_select");
 
         /**@type {HTMLButtonElement} */
-        this.prevMonthButton = calendarInput.querySelector("#prev_month_button");
+        this.prevMonthButton = this.rootElement.querySelector("#prev_month_button");
         /**@type {HTMLButtonElement} */
-        this.nextMonthButton = calendarInput.querySelector("#next_month_button");
+        this.nextMonthButton = this.rootElement.querySelector("#next_month_button");
         /**@type {HTMLButtonElement} */
-        this.toggleCalendarButton = calendarInput.querySelector("#calendar_toggle_button");
+        this.toggleCalendarButton = this.rootElement.querySelector("#calendar_toggle_button");
 
 
         /**@type {HTMLDivElement} */
-        this.daysGridContainer = calendarInput.querySelector("#days_grid_container");
+        this.daysGridContainer = this.rootElement.querySelector("#days_grid_container");
 
         this.selectedDate = new Date();
         this.currentMonthDisplay = new Date();
@@ -47,6 +48,42 @@ class DatePicker {
         this.initSelectedDateFromInput();
         this.selectOptionsFromMonthInDisplay();
 
+    }
+
+    buildBaseDatePicker(){
+        this.rootElement.innerHTML += 
+        `
+        <button class="calendar_toggle_button" id="calendar_toggle_button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                <path d="M128 0c17.7 0 32 14.3 32 32l0 32 128 0 0-32c0-17.7 14.3-32 32-32s32 14.3 32 32l0 32 32 0c35.3 0 64 28.7 64 64l0 288c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 128C0 92.7 28.7 64 64 64l32 0 0-32c0-17.7 14.3-32 32-32zM64 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm128 0l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM64 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zm112 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16z" />
+            </svg>
+        </button>
+        <div class="calendar hidden" id="calendar">
+            <div class="calendar_header">
+                <button class="nav_button" id="prev_month_button">‹</button>
+                <div class="month_year" id="month_year_display">
+                    <select id="month_select">
+                    </select>
+                    <select id="year_select">
+
+                    </select>
+                </div>
+                <button class="nav_button" id="next_month_button">›</button>
+            </div>
+
+            <div class="days_header">
+                <div class="day_name">Lun</div>
+                <div class="day_name">Mar</div>
+                <div class="day_name">Mer</div>
+                <div class="day_name">Jeu</div>
+                <div class="day_name">Ven</div>
+                <div class="day_name">Sam</div>
+                <div class="day_name">Dim</div>
+            </div>
+
+            <div class="days_grid" id="days_grid_container"></div>
+        </div>
+        `;
     }
 
     initSelectedDateFromInput() {
