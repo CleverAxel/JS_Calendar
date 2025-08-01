@@ -4,7 +4,10 @@ class DatePicker {
      */
     constructor(datePickerElement) {
         this.rootElement = datePickerElement;
+        this.addTimeSelection = this.rootElement.getAttribute("data-add-time") == "true";
+        this.minuteSelectStep = 5;
         this.buildBaseDatePicker();
+
 
         /**@type {HTMLElement} */
         this.monthYearDisplay = this.rootElement.querySelector("#month_year_display");
@@ -16,6 +19,13 @@ class DatePicker {
         this.yearSelect = this.rootElement.querySelector("#year_select");
         /**@type {HTMLInputElement} */
         this.monthSelect = this.rootElement.querySelector("#month_select");
+
+        /**@type {HTMLInputElement} */
+        this.hourSelect = this.rootElement.querySelector("#hour_select");
+        /**@type {HTMLInputElement} */
+        this.minuteSelect = this.rootElement.querySelector("#minute_select");
+
+
 
         /**@type {HTMLButtonElement} */
         this.prevMonthButton = this.rootElement.querySelector("#prev_month_button");
@@ -35,7 +45,7 @@ class DatePicker {
 
         // day(1-2 digits), non-digit, month(1-2), non-digit, year(4), with optional surrounding whitespace, the delimiter can be whatever except a number
         // don't care about the spaces before or after.
-        this.regexDateParser = /^\s*(\d{1,2})\D(\d{1,2})\D(\d{4})\s*$/;
+        this.regexDateParser = this.addTimeSelection ? /^\s*(\d{1,2})\s*\D\s*(\d{1,2})\s*\D\s*(\d{4})\D+(\d{1,2})\s*\D\s*(\d{1,2})\s*$/ : /^\s*(\d{1,2})\s*\D\s*(\d{1,2})\s*\D\s*(\d{4})\s*$/;
 
 
         this.monthNames = [
@@ -47,18 +57,17 @@ class DatePicker {
         this.buildOptionsInSelect();
         this.initSelectedDateFromInput();
         this.selectOptionsFromMonthInDisplay();
-
     }
 
-    buildBaseDatePicker(){
-        this.rootElement.innerHTML += 
-        `
+    buildBaseDatePicker() {
+        this.rootElement.innerHTML +=
+            `
         <button class="calendar_toggle_button" id="calendar_toggle_button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
                 <path d="M128 0c17.7 0 32 14.3 32 32l0 32 128 0 0-32c0-17.7 14.3-32 32-32s32 14.3 32 32l0 32 32 0c35.3 0 64 28.7 64 64l0 288c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 128C0 92.7 28.7 64 64 64l32 0 0-32c0-17.7 14.3-32 32-32zM64 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm128 0l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM64 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm144-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zm112 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16z" />
             </svg>
         </button>
-        <div class="calendar hidden" id="calendar">
+        <div class="calendar " id="calendar">
             <div class="calendar_header">
                 <button class="nav_button" id="prev_month_button">‹</button>
                 <div class="month_year" id="month_year_display">
@@ -82,6 +91,15 @@ class DatePicker {
             </div>
 
             <div class="days_grid" id="days_grid_container"></div>
+            ${this.addTimeSelection
+                ?
+                `<div class="hour_minute" id="hour_minute_display">
+                    <span class="hour_label">Heure :</span>
+                    <select id="hour_select"></select>
+                    <span>:</span>
+                    <select id="minute_select"></select>
+                </div> ` : ``
+            }
         </div>
         `;
     }
@@ -96,12 +114,24 @@ class DatePicker {
             const year = parseInt(matches[3], 10);
             const displaySelectedDate = true;
             this.setSelectedDate(year, month, day, displaySelectedDate);
-            this.reformatDateInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear() });
+
+            if (this.addTimeSelection) {
+                const hour = parseInt(matches[4]) % 24;
+                const minute = parseInt(matches[5]) % 60;
+                this.reformatDatetimeInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear(), hour: hour, minute: minute })
+                this.updateTimeSelect(hour, minute);
+            } else {
+                this.reformatDateInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear() });
+            }
         } else {
-            if (value.trim().length != "") {
+            if (value.trim().length != "") { //invalid date, don't care about the time
                 this.input.classList.add("invalid");
             } else {
-                this.reformatDateInInput({ day: this.currentMonthDisplay.getDate(), month: this.currentMonthDisplay.getMonth() + 1, year: this.currentMonthDisplay.getFullYear() });
+                if (this.addTimeSelection) {
+                    this.reformatDatetimeInInput({ day: this.currentMonthDisplay.getDate(), month: this.currentMonthDisplay.getMonth() + 1, year: this.currentMonthDisplay.getFullYear(), hour: this.currentMonthDisplay.getHours(), minute: this.currentMonthDisplay.getMinutes() });
+                } else {
+                    this.reformatDateInInput({ day: this.currentMonthDisplay.getDate(), month: this.currentMonthDisplay.getMonth() + 1, year: this.currentMonthDisplay.getFullYear() });
+                }
             }
             this.render();
         }
@@ -144,6 +174,78 @@ class DatePicker {
             option.innerHTML = i;
             this.yearSelect.appendChild(option);
         }
+
+        if (!this.addTimeSelection)
+            return;
+
+        const date = new Date();
+        const currentHour = date.getHours();
+        const currentMinute = date.getMinutes();
+
+        const stepHour = 1;
+        for (let hour = 0; hour <= 23; hour += stepHour) {
+            const formatHour = String(hour).padStart(2, '0');
+            const option = document.createElement("option");
+
+            if (hour == currentHour)
+                option.selected = true;
+
+            option.value = formatHour;
+            option.innerHTML = formatHour;
+            this.hourSelect.appendChild(option);
+        }
+
+        const stepMinute = this.minuteSelectStep;
+        for (let minute = 0; minute < 60; minute += stepMinute) {
+            const formatMinute = String(minute).padStart(2, '0');
+            const option = document.createElement("option");
+            option.value = formatMinute;
+            option.innerHTML = formatMinute;
+            this.minuteSelect.appendChild(option);
+        }
+
+        this.selectClosestOptionFromMinute(currentMinute);
+    }
+
+    /**
+     * 
+     * @param {number} hour 
+     * @param {number} minute 
+     */
+    updateTimeSelect(hour, minute) {
+        hour = hour % 24;
+        minute = minute % 60;
+        const hourPadded = String(hour).padStart(2, '0');
+        this.hourSelect.querySelector(`option[value="${hourPadded}"]`).selected = true;
+        this.selectClosestOptionFromMinute(minute);
+    }
+
+    /**
+     * @param {number} minute 
+     */
+    selectClosestOptionFromMinute(minute) {
+        let minuteValueOption = "00";
+        const stepMinute = this.minuteSelectStep;
+        for (let minuteIterator = 0; minuteIterator < 60; minuteIterator += stepMinute) {
+            const diffCurrentMinute = Math.abs(minuteIterator - minute);
+            const diffNextMinute = Math.abs((minuteIterator + stepMinute) - minute);
+            if (diffCurrentMinute >= 0 && diffCurrentMinute <= stepMinute && diffNextMinute >= 0 && diffNextMinute <= stepMinute) {
+                if (diffCurrentMinute <= diffNextMinute) {
+                    minuteValueOption = String(minuteIterator).padStart(2, '0');
+                    break;
+                } else {
+                    if (minuteIterator + stepMinute >= 60) {
+                        minuteValueOption = String(minuteIterator).padStart(2, '0');
+                        break;
+                    } else {
+                        minuteValueOption = String(minuteIterator + stepMinute).padStart(2, '0');
+                        break;
+                    }
+                }
+            }
+        }
+
+        this.minuteSelect.querySelector(`option[value="${minuteValueOption}"]`).selected = true;
     }
 
     initEventListeners() {
@@ -152,10 +254,15 @@ class DatePicker {
         this.toggleCalendarButton.addEventListener("click", () => this.toggleCalendarVisibility());
         document.addEventListener("click", (e) => this.handleOutsideClick(e));
         this.input.addEventListener("input", () => this.handleInputChange());
-        this.input.addEventListener("blur", () => this.handleInputBlur());
+        this.input.addEventListener("blur", (e) => this.handleInputBlur(e));
         this.yearSelect.addEventListener("change", () => this.handleYearChange());
         this.monthSelect.addEventListener("change", () => this.handleMonthChange());
         this.daysGridContainer.addEventListener("click", (e) => this.handleDayClick(e));
+
+        if (this.addTimeSelection) {
+            this.hourSelect.addEventListener("change", () => this.handleTimeChange());
+            this.minuteSelect.addEventListener("change", () => this.handleTimeChange());
+        }
     }
 
     navigateToPreviousMonth() {
@@ -187,33 +294,42 @@ class DatePicker {
         const matches = value.match(this.regexDateParser);
 
         if (matches && this.isDateValid(matches)) {
-            this.reformatDateInInput({
-                day: parseInt(matches[1]),
-                month: parseInt(matches[2]),
-                year: parseInt(matches[3])
-            });
+            // this.reformatDateInInput({
+            //     day: parseInt(matches[1]),
+            //     month: parseInt(matches[2]),
+            //     year: parseInt(matches[3])
+            // });
             this.input.classList.remove("invalid");
 
             // Parse the input string into numbers
-            let [, day, month, year] = matches.map(Number);
-            this.setSelectedDate(year, month - 1, day, true);
+            if (this.addTimeSelection) {
+                let [, day, month, year, hour, minute] = matches.map(Number);
+                this.setSelectedDate(year, month - 1, day, true);
+                this.updateTimeSelect(hour, minute);
+            } else {
+                let [, day, month, year] = matches.map(Number);
+                this.setSelectedDate(year, month - 1, day, true);
+            }
         }
     }
 
-    handleInputBlur() {
+    handleInputBlur(e) {
+
         const value = this.input.value;
         const matches = value.match(this.regexDateParser);
-
-        if (!matches || !this.isDateValid(matches)) {
+        if (!matches || !this.isDateValid(matches)) {            
             this.input.classList.add("invalid");
             return;
         }
 
-        this.reformatDateInInput({
-            day: parseInt(matches[1]),
-            month: parseInt(matches[2]),
-            year: parseInt(matches[3])
-        });
+        if (this.addTimeSelection) {
+            const hour = parseInt(matches[4]) % 24;
+            const minute = parseInt(matches[5]) % 60;
+            this.reformatDatetimeInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear(), hour: hour, minute: minute })
+            this.updateTimeSelect(hour, minute);
+        } else {
+            this.reformatDateInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear() });
+        }
         this.input.classList.remove("invalid");
     }
 
@@ -229,17 +345,34 @@ class DatePicker {
         this.render();
     }
 
+    handleTimeChange() {
+        const hour = this.hourSelect.value;
+        const minute = this.minuteSelect.value;
+        this.reformatDatetimeInInput({ day: this.selectedDate.getDate(), month: this.selectedDate.getMonth() + 1, year: this.selectedDate.getFullYear(), hour: hour, minute: minute })
+    }
+
     handleDayClick(e) {
         // Look on what kind of cells the user is clicking, if the cell is not "empty", 
         // we retrieve its data-attribute, the day, and we set the selected date.
         if (e.target.classList.contains("day_cell") && !e.target.classList.contains("empty")) {
             const day = parseInt(e.target.getAttribute("data-day"));
             this.setSelectedDate(this.currentMonthDisplay.getFullYear(), this.currentMonthDisplay.getMonth(), day);
-            this.reformatDateInInput({
-                day: day,
-                month: this.currentMonthDisplay.getMonth() + 1,
-                year: this.currentMonthDisplay.getFullYear()
-            });
+
+            if (this.addTimeSelection) {
+                const hour = this.hourSelect.value;
+                const minute = this.minuteSelect.value;
+                this.reformatDatetimeInInput({ day: day, month: this.currentMonthDisplay.getMonth() + 1, year: this.currentMonthDisplay.getFullYear(), hour: hour, minute: minute })
+            } else {
+                this.reformatDateInInput({
+                    day: day,
+                    month: this.currentMonthDisplay.getMonth() + 1,
+                    year: this.currentMonthDisplay.getFullYear()
+                });
+            }
+
+            setTimeout(() => {
+                this.input.classList.remove("invalid");
+            }, 0);
         }
     }
 
@@ -251,6 +384,17 @@ class DatePicker {
         const paddedMonth = String(month).padStart(2, '0');
 
         this.input.value = `${paddedDay}/${paddedMonth}/${year}`;
+    }
+    /**
+     * @param {{ day: number, month: number, year: number, hour:number, minute:number }} dateObj
+     */
+    reformatDatetimeInInput({ day, month, year, hour, minute }) {
+        const paddedDay = String(day).padStart(2, '0');
+        const paddedMonth = String(month).padStart(2, '0');
+        const paddedHour = String(hour).padStart(2, '0');
+        const paddedMinute = String(minute).padStart(2, '0');
+
+        this.input.value = `${paddedDay}/${paddedMonth}/${year} ${paddedHour}:${paddedMinute}`;
     }
 
     isDateValid(matches) {
